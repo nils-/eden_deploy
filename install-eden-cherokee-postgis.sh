@@ -13,7 +13,7 @@ function UpdateSystem {
     apt-get clean
 
     # Install Admin Tools
-    apt-get install -y unzip psmisc mlocate telnet lrzsz vim elinks-lite rcconf htop sudo p7zip dos2unix curl
+    apt-get install -y unzip psmisc mlocate telnet lrzsz vim elinks-lite rcconf htop sudo p7zip dos2unix curl wget locales-all
     apt-get clean
     # Git
     apt-get -y install git-core
@@ -36,25 +36,28 @@ function InstallPython {
    apt-get -y install python-dev
    # 100 Mb of diskspace due to deps, so only if you want an advanced shell
    #apt-get -y install ipython
+ 
    apt-get clean
-   apt-get -y install python-lxml python-setuptools python-dateutil
+   apt-get -y install python-lxml python-setuptools python-dateutil locales-all
    apt-get clean
    apt-get -y install python-serial
    apt-get -y install python-imaging python-reportlab
    apt-get -y install python-matplotlib
    apt-get -y install python-xlwt python-xlrd
    apt-get -y install build-essential
-   apt-get clean
-
-   # Upgrade Shapely for Simplify enhancements
-   #apt-get remove -y python-shapely
+   apt-get -y install python-pip
+   apt-get -y install python 
    apt-get install -y libgeos-dev
-   wget http://pypi.python.org/packages/source/S/Shapely/Shapely-1.2.18.tar.gz
-   tar zxvf Shapely-1.2.18.tar.gz
-   cd Shapely-1.2.18
-   python setup.py install
-   cd ..
+   apt-get clean  
 }
+
+function InstallPipPackages {
+   ##Here is a list of packages installed using python pip package manager
+   # Upgrade Shapely for Simplify enhancements
+   pip install shapely
+}
+
+
 function InstallWeb2py {
 
 	#########
@@ -262,33 +265,21 @@ EOF
 }
 
 function InstallUwsgi {
-	# Install uWSGI
-	#apt-get install -y libxml2-dev
-	cd /tmp
-	wget http://projects.unbit.it/downloads/uwsgi-1.9.18.2.tar.gz
-	tar zxvf uwsgi-1.9.18.2.tar.gz
-	cd uwsgi-1.9.18.2
-	#cd uwsgi-1.2.6/buildconf
-	#wget http://eden.sahanafoundation.org/downloads/uwsgi_build.ini
-	#cd ..
-	#sed -i "s|, '-Werror'||" uwsgiconfig.py
-	#python uwsgiconfig.py --build uwsgi_build
-	python uwsgiconfig.py --build pyonly.ini
-	cp uwsgi /usr/local/bin
+	apt-get -y  install uwsgi uwsgi-plugin-python
 
 # Configure uwsgi
 
-## Log rotation
-cat <<- EOF > "/etc/logrotate.d/uwsgi"
-/var/log/uwsgi/*.log {
-       weekly
-       rotate 10
-       copytruncate
-       delaycompress
-       compress
-       notifempty
-       missingok
-}
+## Log rot
+	cat <<- EOF > "/etc/logrotate.d/uwsgi"
+	/var/log/uwsgi/*.log {
+	weekly
+	rotate 10
+	copytruncate
+	delaycompress
+	compress
+	notifempty
+	missingok
+	}
 EOF
 
 ## Add Scheduler config
@@ -325,6 +316,7 @@ EOF
 	chdir = /home/web2py/
 	module = wsgihandler
 	mule = run_scheduler.py
+	plugin = python27
 	workers = 4
 	cheap = true
 	idle = 1000
@@ -348,7 +340,7 @@ EOF
 	# /etc/init.d/uwsgi-prod
 	#
 
-	daemon=/usr/local/bin/uwsgi
+	daemon=/usr/bin/uwsgi
 	pid=/tmp/uwsgi-prod.pid
 	args="/home/web2py/uwsgi.ini"
 
@@ -522,7 +514,7 @@ function ConfigCherokee {
 	source!1!env_inherited = 1
 	source!1!group = web2py
 	source!1!host = 127.0.0.1:59025
-	source!1!interpreter = /usr/local/bin/uwsgi -s 127.0.0.1:59025 -x /home/web2py/uwsgi.xml
+	source!1!interpreter = /usr/bin/uwsgi -s 127.0.0.1:59025 -x /home/web2py/uwsgi.ini
 	source!1!nick = uWSGI 1
 	source!1!timeout = 1000
 	source!1!type = host
@@ -568,8 +560,8 @@ function InstallPostgres {
 	cat <<- EOF >> "/etc/apt/sources.list.d/pgdg.list"
 	deb http://apt.postgresql.org/pub/repos/apt/ wheezy-pgdg main
 EOF
-	wget https://www.postgresql.org/media/keys/ACCC4CF8.asc
-	apt-key add ACCC4CF8.asc
+	wget --quiet -O - https://www.postgresql.org/media/keys/ACCC4CF8.asc | sudo apt-key add -
+	
 	apt-get update
 
 	apt-get -y install postgresql-9.3 python-psycopg2 postgresql-9.3-postgis ptop
@@ -728,6 +720,10 @@ function Init {
 	UpdateSystem
 
 	InstallPython
+       
+        InstallUwsgi
+        
+        InstallPipPackages
 
 	InstallWeb2py
 

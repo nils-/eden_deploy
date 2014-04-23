@@ -107,7 +107,9 @@ function ConfigurePostgreSQL {
 	#su -c - postgres "createlang plpgsql -d sahana"
         echo "Adding GIS"
 	# PostGIS
-	su -c - postgres "psql -q -d sahana -f /usr/share/postgresql/9.3/extension/postgis--2.1.2.sql"
+        PostGIS=$( dpkg-query -L postgresql-9.3-postgis-scripts | grep -P "postgis--\d+.\d+.\d+.sql" )
+        echo "Found ${PostGis} "
+	su -c - postgres "psql -q -d sahana -f ${PostGIS}"
 	su -c - postgres "psql -q -d sahana -c 'grant all on geometry_columns to sahana;'"
 	su -c - postgres "psql -q -d sahana -c 'grant all on spatial_ref_sys to sahana;'"
 }
